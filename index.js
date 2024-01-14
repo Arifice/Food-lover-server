@@ -1,11 +1,15 @@
 const express = require('express');
 const cors = require('cors');
+const jwt=require('jsonwebtoken');
 const app=express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port=process.env.PORT || 5000;
 
 // middlewaire
-app.use(cors());
+app.use(cors({
+  origin:['http://localhost:5173'],
+  credentials:true
+}));
 app.use(express.json());
 
 require('dotenv').config();
@@ -30,7 +34,24 @@ async function run() {
      const serviceCollection=client.db('FoodLover').collection('services');
      const teamCollection=client.db('FoodLover').collection('team');
      const orderCollection=client.db('FoodLover').collection('order');
+      // auth related api
+      app.post('/jwt',async(req,res)=>{
+        const user=req.body;
+        console.log('jwt user',user);
+        const token=jwt.sign(user,process.env.ACCESS_TOKEN,{expiresIn:'1h'});
+        res
+        .cookie('token',token,{
+          httpOnly:true,
+          secure:true,
+          sameSite:'none'
+        })
+        .send({success:true});
+      })
 
+
+
+
+      // services related api
      app.get('/services',async(req,res)=>{
         const result=await serviceCollection.find().toArray();
         res.send(result);
@@ -49,20 +70,20 @@ async function run() {
      })
      app.post('/order',async(req,res)=>{
       const newOrder=req.body;
-      console.log('new order',newOrder);
+      // console.log('new order',newOrder);
       const result=await orderCollection.insertOne(newOrder);
       res.send(result);
      })
      app.get('/order',async(req,res)=>{
-      const result=await orderCollection.find().toArray();
+      console.log(req.query.email);
+      let query={};
+      if(req.query.email){
+        query={email:req.query.email}
+      }
+      const result=await orderCollection.find(query).toArray();
       res.send(result);
      })
-     app.get('/order/:id',async(req,res)=>{
-      const id=req.params;
-      const query={_id:new ObjectId(id)};
-      const result=await orderCollection.findOne(query);
-      res.send(result);
-     })
+     
      app.delete('/order/:id',async(req,res)=>{
       const id=req.params;
       const query={_id:new ObjectId(id)};
