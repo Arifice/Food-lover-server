@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const jwt=require('jsonwebtoken');
+const cookieParser=require('cookie-parser');
 const app=express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port=process.env.PORT || 5000;
@@ -11,6 +12,7 @@ app.use(cors({
   credentials:true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 require('dotenv').config();
 
@@ -76,6 +78,7 @@ async function run() {
      })
      app.get('/order',async(req,res)=>{
       console.log(req.query.email);
+      console.log('tok tok token',req.cookies.token);
       let query={};
       if(req.query.email){
         query={email:req.query.email}
