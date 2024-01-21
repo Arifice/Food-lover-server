@@ -95,6 +95,10 @@ async function run() {
 
 
       // services related api
+      app.get('/home/services',logger,async(req,res)=>{
+        const result=await serviceCollection.find().toArray();
+        res.send(result);
+      })
       
      app.get('/services',logger, async(req,res)=>{
         const filter=req.query;
