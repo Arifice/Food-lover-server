@@ -9,8 +9,10 @@ const port=process.env.PORT || 5000;
 // middlewaire
 app.use(cors({
   origin:[
-        'https://food-lover-client.web.app',
-       ' https://food-lover-client.firebaseapp.com'
+    'https://food-lover-client.web.app',
+    'https://food-lover-client.firebaseapp.com',
+    'http://localhost:5173',
+    'http://localhost:5174'
   ],
   credentials:true
 }));
@@ -66,8 +68,10 @@ async function run() {
      const serviceCollection=client.db('FoodLover').collection('services');
      const teamCollection=client.db('FoodLover').collection('team');
      const orderCollection=client.db('FoodLover').collection('order');
-     const myServiceCollection=client.db('FoodLover').collection('myServices');
-      // auth related api
+     
+     
+     
+     // auth related api
       app.post('/jwt',logger, async(req,res)=>{
         const user=req.body;
         console.log('jwt user',user);
@@ -81,13 +85,32 @@ async function run() {
         .send({success:true});
       })
 
+    // app.post('/logout',async(req,res)=>{
+    //   const user=req.body;
+    //   console.log('login out',user);
+    //   res.clearCookie('token',{maxAge:0}).send({success:true});
+    // })
+
 
 
 
       // services related api
       
      app.get('/services',logger, async(req,res)=>{
-        const result=await serviceCollection.find().toArray();
+        const filter=req.query;
+        console.log({filter});
+        const query={
+          title:{
+            $regex:filter.search,
+            $options:'i',
+          }
+        };
+        const options={
+          srot: {
+            price: filter.sort==='asc'? 1 : -1,
+          },
+        };
+        const result=await serviceCollection.find(query,options).toArray();
         res.send(result);
      })
      app.post('/services',logger, async(req,res)=>{
@@ -102,28 +125,46 @@ async function run() {
       const result=await serviceCollection.findOne(query);
       res.send(result);
      })
+     app.delete('/services/:id',logger, async(req,res)=>{
+      const id=req.params.id;
+      const query={_id: new ObjectId(id)};
+      const result=await serviceCollection.deleteOne(query);
+      res.send(result);
+     })
+     app.patch('/services/:id',logger,async(req,res)=>{
+      const id=req.params.id;
+      const service=req.body;
+      const query={_id:new ObjectId(id)};
+      const updateDoc={
+        $set:{
+            customerName:service.customerName,
+            email:service.email,
+            title:service.title,
+            img:service.img,
+            price:service.price,
+            date:service.date,
+            description:service.description,
+            quantity:service.quantity,
+        }
+      }
+      const result=await serviceCollection.updateOne(query,updateDoc);
+      res.send(result);
+
+     })
+     app.get('/services/user/:email',async(req,res)=>{
+      const email=req.params.email;
+      const query={email:email};
+      console.log({query})
+      const result=await serviceCollection.find(query).toArray();
+      res.send(result);
+     })
      app.post('/order',logger, async(req,res)=>{
       const newOrder=req.body;
       // console.log('new order',newOrder);
       const result=await orderCollection.insertOne(newOrder);
       res.send(result);
      })
-
-     app.post('/myServices',async(req,res)=>{
-      const myService=req.body;
-      const result=await myServiceCollection.insertOne(myService);
-      res.send(result);
-    })
-    app.get('/myServices',async(req,res)=>{
-      console.log(req.query.email);
-      let query={};
-      if(req.query.email){
-        query={email:req.query.email};
-      }
-      const result=await myServiceCollection.find(query).toArray();
-      res.send(result);
-      
-    })
+     
 
      app.get('/order',logger,verifyToken, async(req,res)=>{
       console.log(req.query.email);
@@ -163,20 +204,7 @@ async function run() {
         res.send(result);
      })
 
-    //  app.patch('/myServices/:id',async(req,res)=>{
-    //   const updatedorders=req.body;
-    //   const id=req.params.id;
-    //   const query={_id: new ObjectId(id)};
-    //   const updateDoc = {
-    //     $set: {
-    //       status: updatedorders.status,
-    //       orderedBy: updatedorders.orderedby
-    //     }
-    //   };
-    //   const result=await myServiceCollection.updateOne(query,updateDoc);
-    //     res.send(result);
-
-    //  })
+   
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
